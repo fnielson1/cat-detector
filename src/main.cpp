@@ -13,7 +13,7 @@
 #define TIMING_ARR_LENGTH 3
 #define ALARM_LENGTH_MS 1000
 
-#define IS_WEMOS
+// #define IS_WEMOS
 #define IR_SENSOR_RECV
 
 #ifdef IS_WEMOS
