@@ -65,6 +65,7 @@ void setup() {
     // WiFi.forceSleepBegin();
     // Set your Static IP address
      // Configures static IP address
+     WiFi.mode(WIFI_STA);
     if (!WiFi.config(local_IP, gateway, subnet)) {
       Serial.println("STA Failed to configure");
     }
@@ -130,9 +131,11 @@ void checkIfIrSignalReceived() {
 }
 
 void connectToWifiAndTransmitSignal() {
-  WiFi.begin(ssid, pass);
-
+  if (WiFi.status() != WL_CONNECTED) {
   Serial.print("Connecting");
+    WiFi.begin(ssid, pass);
+  }
+
   for (int i = NUMBER_OF_WIFI_CONNECT_ATTEMPTS; i >= 0; i--) {
     if (WiFi.status() != WL_CONNECTED) {
       digitalWrite(LED_PIN, LOW);
@@ -140,6 +143,9 @@ void connectToWifiAndTransmitSignal() {
       Serial.print(".");
       digitalWrite(LED_PIN, HIGH);
       delay(250);
+    }
+    else {
+      break;
     }
   }
 
