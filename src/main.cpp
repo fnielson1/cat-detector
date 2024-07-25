@@ -14,7 +14,7 @@
 #define PULSE_HIGH_DELAY_MS 5
 #define ALARM_LENGTH_MS 1000
 #define TIMING_ARR_LENGTH 6
-#define NUMBER_OF_WIFI_CONNECT_ATTEMPTS 6
+#define NUMBER_OF_WIFI_CONNECT_ATTEMPTS 10 
 
 #define IS_WEMOS
 #define IR_SENSOR_RECV
@@ -46,7 +46,7 @@ bool lastSignalWasHigh = false;
 int timingArr[TIMING_ARR_LENGTH];
 int timingArrIndex = 0;
 
-IPAddress local_IP(192, 168, 2, 36);
+IPAddress local_IP(192, 168, 2, 35);
 IPAddress gateway(192, 168, 2, 1);
 IPAddress subnet(255, 255, 255, 0);
 
@@ -60,15 +60,17 @@ void setup() {
     // Wait for serial to initialize.
     while (!Serial) { }
 
-    // Put wifi to sleep to save power
-    // WiFi.disconnect();
-    // WiFi.forceSleepBegin();
     // Set your Static IP address
-     // Configures static IP address
      WiFi.mode(WIFI_STA);
     if (!WiFi.config(local_IP, gateway, subnet)) {
       Serial.println("STA Failed to configure");
     }
+
+    // Put wifi to sleep to save power
+    WiFi.forceSleepBegin();
+
+    Serial.println("");
+    Serial.println("Started up");
   #endif
 
   #ifdef IR_SENSOR_RECV
@@ -125,14 +127,15 @@ void checkIfIrSignalReceived() {
   }
   else {
     if (timeDiff > TIME_ELAPSED_TO_SLEEP_MS) {
-      // ESP.deepSleep(SLEEP_TIME, RF_NO_CAL);
+      Serial.println("Going to sleep");
+      ESP.deepSleep(SLEEP_TIME, RF_NO_CAL);
     }
   }
 }
 
 void connectToWifiAndTransmitSignal() {
   if (WiFi.status() != WL_CONNECTED) {
-  Serial.print("Connecting");
+    Serial.print("Connecting");
     WiFi.begin(ssid, pass);
   }
 
@@ -155,6 +158,9 @@ void connectToWifiAndTransmitSignal() {
 
     digitalWrite(LED_PIN, HIGH);
     delay(ALARM_LENGTH_MS);
+    Serial.println("Alarm done");
+
+    timeSinceLastIrSignal = millis(); // Don't make us think we need to sleep as we were merely transmitting the alarm
   }
 }
 
