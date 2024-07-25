@@ -8,15 +8,19 @@
 
 #define IR_TRANS_PIN PIN_PA7
 
+#define SLEEP_TIME 10e6
+#define TIME_ELAPSED_TO_SLEEP_MS 5000
 #define PULSE_DELAY_MS 100
 #define PULSE_HIGH_DELAY_MS 5
-#define TIMING_ARR_LENGTH 3
 #define ALARM_LENGTH_MS 1000
+#define TIMING_ARR_LENGTH 6
+#define NUMBER_OF_WIFI_CONNECT_ATTEMPTS 6
 
-// #define IS_WEMOS
+#define IS_WEMOS
 #define IR_SENSOR_RECV
 
 #ifdef IS_WEMOS
+  #include <ESP8266WiFi.h>
   #define LED_PIN SCL
   #define IR_RECV_PIN SDA
 #else
@@ -29,21 +33,42 @@
 void checkIfIrSignalReceived();
 void transmitIrSignal();
 void checkIfCommandReceived();
+void connectToWifiAndTransmitSignal();
+void pushToTimingArray(unsigned long);
 
 
+const char ssid[] = "Monkey";
+const char pass[] = "nielsonfamilyhome";
+const int WAIT_FOR_PULSE_DELAY = PULSE_DELAY_MS / 2;
 const int PULSE_FUDGE_FACTOR = 50 + PULSE_HIGH_DELAY_MS;
 unsigned long timeSinceLastIrSignal = 0;
 bool lastSignalWasHigh = false;
 int timingArr[TIMING_ARR_LENGTH];
 int timingArrIndex = 0;
 
+IPAddress local_IP(192, 168, 2, 36);
+IPAddress gateway(192, 168, 2, 1);
+IPAddress subnet(255, 255, 255, 0);
 
 void setup() {
-  #ifdef IS_WEMOS
-    Serial.begin(9600);
-  #endif
-
   pinMode(LED_PIN, OUTPUT);
+
+  #ifdef IS_WEMOS
+    // Don't connect GPIO 16 to RESET pin until after upload
+    Serial.begin(9600);
+
+    // Wait for serial to initialize.
+    while (!Serial) { }
+
+    // Put wifi to sleep to save power
+    // WiFi.disconnect();
+    // WiFi.forceSleepBegin();
+    // Set your Static IP address
+     // Configures static IP address
+    if (!WiFi.config(local_IP, gateway, subnet)) {
+      Serial.println("STA Failed to configure");
+    }
+  #endif
 
   #ifdef IR_SENSOR_RECV
     pinMode(IR_RECV_PIN, INPUT);
@@ -72,34 +97,68 @@ void transmitIrSignal() {
 void checkIfIrSignalReceived() {
   int signalDetected = !digitalRead(IR_RECV_PIN);
   unsigned long currentTime = millis();
+  unsigned long timeDiff = currentTime - timeSinceLastIrSignal;
+
 
   // Ignore a high signal if the last signal was high
-  if (signalDetected && lastSignalWasHigh) {
-    return;
-  }
-  if (signalDetected) 
+  if (signalDetected && !lastSignalWasHigh && timeDiff >= WAIT_FOR_PULSE_DELAY) 
   {
-    unsigned long timeDiff = currentTime - timeSinceLastIrSignal;
-    lastSignalWasHigh = true;
-
     // We shouldn't go into here unless the time from the last signal till now is at least the length of the pulse delay
-    if (timeDiff >= PULSE_DELAY_MS)
-    {
-      Serial.println(timeDiff);
-      Serial.println("");
+    Serial.println("HIGH");
+    Serial.println(timeDiff);
+    Serial.println("");
 
-      timingArr[timingArrIndex++] = currentTime;
-      timeSinceLastIrSignal = currentTime;
+    lastSignalWasHigh = true;
+    timeSinceLastIrSignal = currentTime;
 
-      if (timingArrIndex == TIMING_ARR_LENGTH)
-      {
-        timingArrIndex = 0;
-        checkIfCommandReceived();
-      }
-    }
+    pushToTimingArray(currentTime);
+  }
+  else if (lastSignalWasHigh) {
+    Serial.println("LOW");
+    Serial.println(timeDiff);
+    Serial.println("");
+
+    lastSignalWasHigh = false;
+
+    pushToTimingArray(currentTime);
   }
   else {
-    lastSignalWasHigh = false;
+    if (timeDiff > TIME_ELAPSED_TO_SLEEP_MS) {
+      // ESP.deepSleep(SLEEP_TIME, RF_NO_CAL);
+    }
+  }
+}
+
+void connectToWifiAndTransmitSignal() {
+  WiFi.begin(ssid, pass);
+
+  Serial.print("Connecting");
+  for (int i = NUMBER_OF_WIFI_CONNECT_ATTEMPTS; i >= 0; i--) {
+    if (WiFi.status() != WL_CONNECTED) {
+      digitalWrite(LED_PIN, LOW);
+      delay(250);
+      Serial.print(".");
+      digitalWrite(LED_PIN, HIGH);
+      delay(250);
+    }
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.print("Connected, IP address: ");
+    Serial.println(WiFi.localIP());
+
+    digitalWrite(LED_PIN, HIGH);
+    delay(ALARM_LENGTH_MS);
+  }
+}
+
+void pushToTimingArray(unsigned long currentTime) {
+  timingArr[timingArrIndex++] = currentTime;
+
+  if (timingArrIndex == TIMING_ARR_LENGTH)
+  {
+    timingArrIndex = 0;
+    checkIfCommandReceived();
   }
 }
 
@@ -116,9 +175,9 @@ void checkIfCommandReceived() {
     }
   }
 
+
   if (isReceived) {
-    digitalWrite(LED_PIN, HIGH);
-    delay(ALARM_LENGTH_MS);
+    connectToWifiAndTransmitSignal();
   }
   digitalWrite(LED_PIN, LOW);
 }
