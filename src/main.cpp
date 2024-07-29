@@ -1,33 +1,7 @@
 #include <Arduino.h>
-
-#define PIN_PA6 0
-#define PIN_PA7 1
-#define PIN_PA1 2
-#define PIN_PA2 3
-#define PIN_PA3 4
-
-#define IR_TRANS_PIN PIN_PA7
-
-#define SLEEP_TIME 10e6
-#define TIME_ELAPSED_TO_SLEEP_MS 5000
-#define PULSE_DELAY_MS 100
-#define PULSE_HIGH_DELAY_MS 5
-#define ALARM_LENGTH_MS 1000
-#define TIMING_ARR_LENGTH 6
-#define NUMBER_OF_WIFI_CONNECT_ATTEMPTS 10 
-
-#define IS_WEMOS
-#define IR_SENSOR_RECV
-
-#ifdef IS_WEMOS
-  #include <ESP8266WiFi.h>
-  #define LED_PIN SCL
-  #define IR_RECV_PIN SDA
-#else
-  #define LED_PIN PIN_PA2
-  #define IR_RECV_PIN PIN_PA1
-#endif
-
+#include "definitions.h"
+#include "../lib/wifi_utils.cpp"
+#include "../lib/mqtt.cpp"
 
 
 void checkIfIrSignalReceived();
@@ -37,18 +11,12 @@ void connectToWifiAndTransmitSignal();
 void pushToTimingArray(unsigned long);
 
 
-const char ssid[] = "Monkey";
-const char pass[] = "nielsonfamilyhome";
 const int WAIT_FOR_PULSE_DELAY = PULSE_DELAY_MS / 2;
 const int PULSE_FUDGE_FACTOR = 50 + PULSE_HIGH_DELAY_MS;
-unsigned long timeSinceLastIrSignal = 0;
 bool lastSignalWasHigh = false;
 int timingArr[TIMING_ARR_LENGTH];
 int timingArrIndex = 0;
 
-IPAddress local_IP(192, 168, 2, 35);
-IPAddress gateway(192, 168, 2, 1);
-IPAddress subnet(255, 255, 255, 0);
 
 void setup() {
   pinMode(LED_PIN, OUTPUT);
@@ -60,14 +28,8 @@ void setup() {
     // Wait for serial to initialize.
     while (!Serial) { }
 
-    // Set your Static IP address
-     WiFi.mode(WIFI_STA);
-    if (!WiFi.config(local_IP, gateway, subnet)) {
-      Serial.println("STA Failed to configure");
-    }
-
-    // Put wifi to sleep to save power
-    WiFi.forceSleepBegin();
+    setupWifi();
+    setupMqtt();
 
     Serial.println("");
     Serial.println("Started up");
@@ -87,6 +49,7 @@ void loop() {
   #else
     transmitIrSignal();
   #endif
+  transmitMqtt();
 }
 
 
@@ -100,7 +63,7 @@ void transmitIrSignal() {
 void checkIfIrSignalReceived() {
   int signalDetected = !digitalRead(IR_RECV_PIN);
   unsigned long currentTime = millis();
-  unsigned long timeDiff = currentTime - timeSinceLastIrSignal;
+  unsigned long timeDiff = currentTime - getTimeSinceLastIrSignal();
 
 
   // Ignore a high signal if the last signal was high
@@ -112,7 +75,7 @@ void checkIfIrSignalReceived() {
     Serial.println("");
 
     lastSignalWasHigh = true;
-    timeSinceLastIrSignal = currentTime;
+    setTimeSinceLastIrSignal(currentTime);
 
     pushToTimingArray(currentTime);
   }
@@ -128,41 +91,11 @@ void checkIfIrSignalReceived() {
   else {
     if (timeDiff > TIME_ELAPSED_TO_SLEEP_MS) {
       Serial.println("Going to sleep");
-      ESP.deepSleep(SLEEP_TIME, RF_NO_CAL);
+      // ESP.deepSleep(SLEEP_TIME, RF_NO_CAL);
     }
   }
 }
 
-void connectToWifiAndTransmitSignal() {
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.print("Connecting");
-    WiFi.begin(ssid, pass);
-  }
-
-  for (int i = NUMBER_OF_WIFI_CONNECT_ATTEMPTS; i >= 0; i--) {
-    if (WiFi.status() != WL_CONNECTED) {
-      digitalWrite(LED_PIN, LOW);
-      delay(250);
-      Serial.print(".");
-      digitalWrite(LED_PIN, HIGH);
-      delay(250);
-    }
-    else {
-      break;
-    }
-  }
-
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.print("Connected, IP address: ");
-    Serial.println(WiFi.localIP());
-
-    digitalWrite(LED_PIN, HIGH);
-    delay(ALARM_LENGTH_MS);
-    Serial.println("Alarm done");
-
-    timeSinceLastIrSignal = millis(); // Don't make us think we need to sleep as we were merely transmitting the alarm
-  }
-}
 
 void pushToTimingArray(unsigned long currentTime) {
   timingArr[timingArrIndex++] = currentTime;
@@ -189,7 +122,12 @@ void checkIfCommandReceived() {
 
 
   if (isReceived) {
-    connectToWifiAndTransmitSignal();
+    #ifdef IS_WEMOS
+      connectToWifiAndTransmitSignal();
+    #elif
+      digitalWrite(LED_PIN, HIGH);
+      delay(ALARM_LENGTH_MS);
+    #endif
   }
   digitalWrite(LED_PIN, LOW);
 }
