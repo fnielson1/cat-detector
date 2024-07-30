@@ -23,8 +23,8 @@
   
 */
 
-const char* topic  = "cat_detector";
-long timeBetweenMessages = 1000 * 20 * 1;
+const char* topic  = "cat-detector";
+long timeBetweenMessages = 500; //1000 * 20 * 1;
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -90,9 +90,6 @@ void reconnect() {
       // topic + clientID + in
       String subscription;
       subscription += topic;
-      subscription += "/";
-      subscription += composeClientID() ;
-      subscription += "/in";
       client.subscribe(subscription.c_str() );
       Serial.print("subscribed to : ");
       Serial.println(subscription);
@@ -113,7 +110,7 @@ void setupMqtt() {
   client.setCallback(callback);
 }
 
-void transmitMqtt() {
+void transmitMqtt(String payload) {
   // confirm still connected to mqtt server
   if (!client.connected()) {
     reconnect();
@@ -124,18 +121,10 @@ void transmitMqtt() {
   if (now - lastMsg > timeBetweenMessages ) {
     lastMsg = now;
     ++value;
-    String payload = "{\"micros\":";
-    payload += micros();
-    payload += ",\"counter\":";
-    payload += value;
-    payload += ",\"client\":";
+    payload += " ";
     payload += composeClientID();
-    payload += "}";
     String pubTopic;
     pubTopic += topic;
-    pubTopic += "/";
-    pubTopic += composeClientID();
-    pubTopic += "/out";
     Serial.print("Publish topic: ");
     Serial.println(pubTopic);
     Serial.print("Publish message: ");

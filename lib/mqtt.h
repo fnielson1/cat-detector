@@ -1,2 +1,2 @@
 void setupMqtt();
-void transmitMqtt();
+void transmitMqtt(String payload);

@@ -1,13 +1,11 @@
 #include <Arduino.h>
 #include "definitions.h"
 #include "../lib/wifi_utils.cpp"
-#include "../lib/mqtt.cpp"
 
 
 void checkIfIrSignalReceived();
 void transmitIrSignal();
 void checkIfCommandReceived();
-void connectToWifiAndTransmitSignal();
 void pushToTimingArray(unsigned long);
 
 
@@ -49,7 +47,6 @@ void loop() {
   #else
     transmitIrSignal();
   #endif
-  transmitMqtt();
 }
 
 

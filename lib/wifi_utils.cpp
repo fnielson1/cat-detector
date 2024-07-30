@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include "definitions.h"
-#include "mqtt.h"
+#include "../lib/mqtt.cpp"
 
 
 unsigned long timeSinceLastIrSignal = 0;
@@ -47,6 +47,7 @@ unsigned long timeSinceLastIrSignal = 0;
       Serial.println(WiFi.localIP());
 
       digitalWrite(LED_PIN, HIGH);
+      transmitMqtt("CAT DETECTED!");
       delay(ALARM_LENGTH_MS);
       Serial.println("Alarm done");
 
@@ -62,9 +63,5 @@ unsigned long timeSinceLastIrSignal = 0;
 
     // Put wifi to sleep to save power
     WiFi.forceSleepBegin();
-    connectToWifiAndTransmitSignal();
   }
-
-
-
 #endif
