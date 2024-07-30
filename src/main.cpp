@@ -91,7 +91,7 @@ void checkIfIrSignalReceived() {
   else {
     if (timeDiff > TIME_ELAPSED_TO_SLEEP_MS) {
       Serial.println("Going to sleep");
-      // ESP.deepSleep(SLEEP_TIME, RF_NO_CAL);
+      ESP.deepSleep(SLEEP_TIME, RF_NO_CAL);
     }
   }
 }

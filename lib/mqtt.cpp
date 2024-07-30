@@ -31,8 +31,6 @@ PubSubClient client(espClient);
 long lastMsg = 0;
 int value = 0;
 
-int status = WL_IDLE_STATUS;     // the starting Wifi radio's status
-
 
 void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Message arrived [");

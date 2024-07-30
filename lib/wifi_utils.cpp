@@ -25,7 +25,7 @@ unsigned long timeSinceLastIrSignal = 0;
 
   void connectToWifiAndTransmitSignal() {
     if (WiFi.status() != WL_CONNECTED) {
-      Serial.print("Connecting");
+      Serial.print("Connecting to wifi");
       WiFi.begin(ssid, pass);
     }
 
@@ -61,7 +61,7 @@ unsigned long timeSinceLastIrSignal = 0;
     }
 
     // Put wifi to sleep to save power
-    // WiFi.forceSleepBegin();
+    WiFi.forceSleepBegin();
     connectToWifiAndTransmitSignal();
   }
 
