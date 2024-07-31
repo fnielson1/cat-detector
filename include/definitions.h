@@ -23,7 +23,8 @@
 
 #ifdef IS_WEMOS
   #include <ESP8266WiFi.h>
-  #define LED_PIN SCL
+  // #define LED_PIN SCL
+  #define LED_PIN LED_BUILTIN
   #define IR_RECV_PIN SDA
 
   const char* mqtt_server = "192.168.2.3";
