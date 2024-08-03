@@ -29,7 +29,7 @@ unsigned long timeSinceLastIrSignal = 0;
       WiFi.begin(ssid, pass);
     }
 
-    for (int i = NUMBER_OF_WIFI_CONNECT_ATTEMPTS; i >= 0; i--) {
+    for (int i = WIFI_MAX_CONNECT_ATTEMPTS; i >= 0; i--) {
       if (WiFi.status() != WL_CONNECTED) {
         digitalWrite(LED_PIN, LOW);
         delay(250);

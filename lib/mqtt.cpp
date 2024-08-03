@@ -29,7 +29,6 @@ long timeBetweenMessages = 500; //1000 * 20 * 1;
 WiFiClient espClient;
 PubSubClient client(espClient);
 long lastMsg = 0;
-int value = 0;
 
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -74,7 +73,10 @@ String composeClientID() {
 
 void reconnect() {
   // Loop until we're reconnected
-  while (!client.connected()) {
+  for (int i = 0; i < MQTT_MAX_CONNECT_ATTEMPTS; i++) {
+    if (client.connected()) {
+      break;
+    }
     Serial.print("Attempting MQTT connection...");
 
     String clientId = composeClientID() ;
@@ -93,7 +95,8 @@ void reconnect() {
       client.subscribe(subscription.c_str() );
       Serial.print("subscribed to : ");
       Serial.println(subscription);
-    } else {
+    } 
+    else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
       Serial.print(" wifi=");
@@ -120,7 +123,6 @@ void transmitMqtt(String payload) {
   long now = millis();
   if (now - lastMsg > timeBetweenMessages ) {
     lastMsg = now;
-    ++value;
     payload += " ";
     payload += composeClientID();
     String pubTopic;
@@ -129,6 +131,6 @@ void transmitMqtt(String payload) {
     Serial.println(pubTopic);
     Serial.print("Publish message: ");
     Serial.println(payload);
-    client.publish((char *)pubTopic.c_str(), (char *)payload.c_str(), true);
+    client.publish((char *)pubTopic.c_str(), (char *)payload.c_str(), false);
   }
 }
