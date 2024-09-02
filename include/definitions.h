@@ -20,8 +20,8 @@
 #define MQTT_MAX_CONNECT_ATTEMPTS 10
 
 
-#define IR_SENSOR_RECV
-#define IS_WEMOS
+// #define IR_SENSOR_RECV
+// #define IS_WEMOS
 
 
 #ifdef IS_WEMOS

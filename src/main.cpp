@@ -10,7 +10,7 @@ void pushToTimingArray(unsigned long);
 
 
 const int WAIT_FOR_PULSE_DELAY = PULSE_DELAY_MS / 2;
-const int PULSE_FUDGE_FACTOR = 50 + PULSE_HIGH_DELAY_MS;
+const int PULSE_FUDGE_FACTOR = 50 + PULSE_DELAY_MS;
 bool lastSignalWasHigh = false;
 int timingArr[TIMING_ARR_LENGTH];
 int timingArrIndex = 0;
@@ -58,27 +58,31 @@ void transmitIrSignal() {
 }
 
 void checkIfIrSignalReceived() {
+  #ifdef IS_WEMOS
   int signalDetected = !digitalRead(IR_RECV_PIN);
   unsigned long currentTime = millis();
   unsigned long timeDiff = currentTime - getTimeSinceLastIrSignal();
 
 
-  // Ignore a high signal if the last signal was high
-  if (signalDetected && !lastSignalWasHigh && timeDiff >= WAIT_FOR_PULSE_DELAY) 
+  if (signalDetected && lastSignalWasHigh && timeDiff > PULSE_HIGH_DELAY_MS + 5) {
+    Serial.println("Resetting timing index");
+    timingArrIndex = 0; // Signal was on too long
+  }
+  else if (signalDetected && !lastSignalWasHigh) 
   {
     // We shouldn't go into here unless the time from the last signal till now is at least the length of the pulse delay
     Serial.println("HIGH");
-    Serial.println(timeDiff);
+    Serial.println(currentTime);
     Serial.println("");
 
     lastSignalWasHigh = true;
     setTimeSinceLastIrSignal(currentTime);
 
-    pushToTimingArray(currentTime);
+    pushToTimingArray(timeDiff);
   }
-  else if (lastSignalWasHigh) {
+  else if (!signalDetected && lastSignalWasHigh && timeDiff > PULSE_HIGH_DELAY_MS) {
     Serial.println("LOW");
-    Serial.println(timeDiff);
+    Serial.println(currentTime);
     Serial.println("");
 
     lastSignalWasHigh = false;
@@ -91,8 +95,8 @@ void checkIfIrSignalReceived() {
       ESP.deepSleep(SLEEP_TIME, RF_NO_CAL);
     }
   }
+  #endif
 }
-
 
 void pushToTimingArray(unsigned long currentTime) {
   timingArr[timingArrIndex++] = currentTime;
@@ -111,7 +115,7 @@ void checkIfCommandReceived() {
     int value = timingArr[i];
     int nextValue = timingArr[i + 1];
 
-    if (value - nextValue > PULSE_FUDGE_FACTOR) {
+    if (nextValue - value > PULSE_FUDGE_FACTOR) {
       isReceived = false;
       break;
     }
@@ -121,7 +125,7 @@ void checkIfCommandReceived() {
   if (isReceived) {
     #ifdef IS_WEMOS
       connectToWifiAndTransmitSignal();
-    #elif
+    #else
       digitalWrite(LED_PIN, HIGH);
       delay(ALARM_LENGTH_MS);
     #endif

@@ -49,7 +49,7 @@ unsigned long timeSinceLastIrSignal = 0;
       digitalWrite(LED_PIN, HIGH);
       transmitMqtt("CAT DETECTED!");
       delay(ALARM_LENGTH_MS);
-      Serial.println("Alarm done");
+      Serial.println("Alarm done\n");
 
       setTimeSinceLastIrSignal(millis()); // Don't make us think we need to sleep as we were merely transmitting the alarm
     }

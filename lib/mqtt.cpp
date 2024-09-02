@@ -26,6 +26,7 @@
 const char* topic  = "cat-detector";
 long timeBetweenMessages = 500; //1000 * 20 * 1;
 
+#ifdef IS_WEMOS
 WiFiClient espClient;
 PubSubClient client(espClient);
 long lastMsg = 0;
@@ -107,7 +108,6 @@ void reconnect() {
     }
   }
 }
-
 void setupMqtt() {
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
@@ -134,3 +134,4 @@ void transmitMqtt(String payload) {
     client.publish((char *)pubTopic.c_str(), (char *)payload.c_str(), false);
   }
 }
+#endif
